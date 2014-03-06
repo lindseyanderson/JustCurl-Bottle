@@ -1,0 +1,93 @@
+# @file   : apache_redhat_vhost.template
+#
+# Template assumes you'll have a www and non-www subdomain.
+# Included separate server blocks for rewrite purposes if needed
+# as well as a basic SSL installation
+#
+# @author : Lindsey Anderson
+# @date   : 21/04/2013
+#
+# @license: apache_redhat_vhost.template is a part of JustCurl
+#
+#    JustCurl is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    JustCurl is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with JustCurl.  If not, see <http://www.gnu.org/licenses/>.
+#
+# @url : http://justcurl.com/
+
+<VirtualHost *:${port}>
+        ServerName ${site_url}
+        ServerAlias www.${site_url}
+        #### This is where you put your files for that domain: ${docroot}
+        DocumentRoot ${docroot}
+
+	# RewriteEngine On
+	# RewriteCond %{HTTP_HOST} ^${site_url}
+	# RewriteRule ^(.*)$ http://www.${site_url} [R=301,L]
+
+        <Directory ${docroot}>
+                Options -Indexes +FollowSymLinks -MultiViews
+                AllowOverride All
+		Order deny,allow
+		Allow from all
+        </Directory>
+        CustomLog /var/log/httpd/${site_url}-access.log combined
+        ErrorLog /var/log/httpd/${site_url}-error.log
+        # Possible values include: debug, info, notice, warn, error, crit,
+        # alert, emerg.
+        LogLevel warn
+</VirtualHost>
+
+
+##
+# To install the SSL certificate, please place the certificates in the following files:
+# >> SSLCertificateFile    /etc/pki/tls/certs/${site_url}.crt
+# >> SSLCertificateKeyFile    /etc/pki/tls/private/${site_url}.key
+# >> SSLCACertificateFile    /etc/pki/tls/certs/${site_url}.ca.crt
+#
+# After these files have been created, and ONLY AFTER, then run this and restart Apache:
+#
+# To remove these comments and use the virtual host, use the following:
+# VI   -  :39,$ s/^#//g
+# RedHat Bash -  sed -i '39,$ s/^#//g' /etc/httpd/vhost.d/${site_url}.conf && service httpd reload
+##
+
+#<VirtualHost _default_:443>
+#        ServerName ${site_url}
+#        ServerAlias www.${site_url}
+#        DocumentRoot ${docroot}
+#        <Directory ${docroot}>
+#                Options -Indexes +FollowSymLinks -MultiViews
+#                AllowOverride All
+#        </Directory>
+#
+#        CustomLog /var/log/httpd/${site_url}-ssl-access.log combined
+#        ErrorLog /var/log/httpd/${site_url}-ssl-error.log
+#
+#        # Possible values include: debug, info, notice, warn, error, crit,
+#        # alert, emerg.
+#        LogLevel warn
+#
+#        SSLEngine on
+#        SSLCertificateFile    /etc/pki/tls/certs/2013-${site_url}.crt
+#        SSLCertificateKeyFile /etc/pki/tls/private/2013-${site_url}.key
+#        SSLCACertificateFile /etc/pki/tls/certs/2013-${site_url}.ca.crt
+#
+#        <FilesMatch \"\.(cgi|shtml|phtml|php)$\">
+#                SSLOptions +StdEnvVars
+#        </FilesMatch>
+#
+#        BrowserMatch \"MSIE [2-6]\" \
+#                nokeepalive ssl-unclean-shutdown \
+#                downgrade-1.0 force-response-1.0
+#        BrowserMatch \"MSIE [17-9]\" ssl-unclean-shutdown
+#</VirtualHost>

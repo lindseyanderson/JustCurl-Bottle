@@ -1,0 +1,197 @@
+#!/bin/bash
+# Virtual Host addition template for Justcurl.com
+#
+# Template assumes you'll have a www and non-www subdomain.
+# Included separate server blocks for rewrite purposes if needed
+# as well as a basic SSL installation
+#
+# @author : Lindsey Anderson
+# @date   : 06/03/2014
+#
+# @license: apache_vhost_installer.template is a part of JustCurl
+#
+#    JustCurl is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    JustCurl is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with JustCurl.  If not, see <http://www.gnu.org/licenses/>.
+#
+# @url : http://justcurl.com/
+
+# Ensure we're root before the script is run
+if [[ "$EUID" -ne 0 ]]; then
+    echo "You must run this script as root" 1>&2
+    exit 1
+fi
+
+
+if [ -f /etc/redhat-release ]; then
+    DISTRO="REDHAT"
+    if [ -f /etc/httpd/vhost.d/{{data['host']}}.conf ]; then
+        echo "Virtual host for {{data['host']}} already exists."
+        exit 1
+    fi
+elif [ -f /etc/debian_version ]; then
+    DISTRO="DEBIAN"
+    if [ ! -f /etc/apache2/sites-enabled/{{data['host']}} ]; then
+        if [ -f /etc/apache2/sites-available/{{data['host']}} ]; then
+            echo "Virtual host for {{data['host']}} already exists."
+            exit 1
+        fi
+    else
+        echo "Virtual host for {{data['host']}} already exists."
+        exit 1
+    fi
+else
+    echo "This isn't Debian or Redhat!"
+    echo "Send me an email at lindsey.anderson@rackspace.com with more information about your OS."
+    exit 1
+fi
+
+PIFS=$IFS
+export DATA=$(cat <<ENDOFTEMPLATE
+<VirtualHost *:{{data['port']}}>
+    ServerName {{data['host']}}
+    ServerAlias www.{{data['host']}}
+    ### Content is loaded from your Document Root
+    DocumentRoot {{data['directory']}}
+
+    # RewriteEngine On
+    # RewriteCond %{HTTP_HOST} ^{{data['host']}}
+    # RewriteRule ^(.*)$ http://www.{{data['host']}} [R=301,L]
+
+    <Directory {{data['directory']}}>
+        Options -Indexes +FollowSymLinks -Multiviews
+        AllowOverride All
+
+        Order deny,allow
+        Allow from all
+    </Directory>
+ENDOFTEMPLATE)
+
+# Log directories change based on the implementation of Apache
+if [[ "$DISTRO" == "REDHAT" ]]; then
+export DATA=${DATA}$(cat <<ENDOFTEMPLATE
+
+    CustomLog /var/log/httpd/{{data['host']}}-access.log combined
+    ErrorLog  /var/log/httpd/{{data['host']}}-error.log
+ENDOFTEMPLATE)
+
+elif [[ "$DISTRO" == "DEBIAN" ]]; then
+export DATA=${DATA}$(cat <<ENDOFTEMPLATE
+
+    CustomLog /var/log/apache2/{{data['host']}}-access.log combined
+    ErrorLog  /var/log/apache2/{{data['host']}}-error.log
+ENDOFTEMPLATE)
+
+fi
+
+export DATA=${DATA}$(cat <<ENDOFTEMPLATE
+
+    # Possible values include: debug, info, notice, warn, error, crit
+    # alert, emerg
+    LogLevel warn
+</VirtualHost>
+
+##
+# To install the SSL certificate, please place the certificates in the following files:
+# >> SSLCertificateFile      /etc/pki/tls/certs/{{data['host']}}.crt
+# >> SSLCertificateKeyFile   /etc/pki/tls/private/{{data['host']}}.key
+# >> SSLCACertificateFile    /etc/pki/tls/certs/{{data['host']}}.CA.crt
+#
+# After these files have been created, and ONLY AFTER, then run this and reload Apache:
+#
+# To remove these comments and use the virtual host, use the following:
+# VI   -  :25,\$ s/^#//g
+# RedHat Bash -  sed -i '25,\$ s/^#//g' /etc/httpd/vhost.d/{{data['host']}}.conf && service httpd reload
+# Debian Bash -  sed -i '25,\$ s/^#//g' /etc/apache2/sites-available/{{data['host']}} && service apache2 reload
+##
+
+#<VirtualHost _default_:443>
+#    ServerName {{data['host']}}
+#    ServerAlias www.{{data['host']}}
+#    DocumentRoot {{data['directory']}}
+#    <Directory {{data['directory']}}>
+#        Options -Indexes +FollowSymLinks -MultiViews
+#        AllowOverride All
+#
+#        Order deny,allow
+#        Allow from all
+#    </Directory>
+#
+ENDOFTEMPLATE)
+
+if [[ "$DISTRO" == "REDHAT" ]]; then
+export DATA=${DATA}$(cat <<ENDOFTEMPLATE
+
+#    CustomLog /var/log/httpd/{{data['host']}}-ssl-access.log combined
+#    ErrorLog  /var/log/httpd/{{data['host']}}-ssl-error.log
+#
+#    # Possible values include: debug, info, notice, warn, error, crit
+#    # alert, emerg
+#    LogLevel warn
+#
+#    SSLEngine on
+#
+#    SSLCertificateFile    /etc/pki/tls/certs/{{data['host']}}.crt
+#    SSLCertificateKeyFile /etc/pki/tls/private/{{data['host']}}.key
+#    SSLCACertificateKeyFile /etc/pki/tls/certs/{{data['host']}}.ca.crt
+#
+ENDOFTEMPLATE)
+
+elif [[ "$DISTRO" == "DEBIAN" ]]; then
+export DATA=${DATA}$(cat <<ENDOFTEMPLATE
+
+#    CustomLog /var/log/apache2/{{data['host']}}-ssl-access.log combined
+#    ErrorLog  /var/log/apache2/{{data['host']}}-ssl-error.log
+#
+#    # Possible values include: debug, info, notice, warn, error, crit
+#    # alert, emerg
+#    LogLevel warn
+#
+#    SSLEngine on
+#    
+#    SSLCertificateFile    /etc/ssl/certs/{{data['host']}}.crt
+#    SSLCertificateKeyFile /etc/ssl/private/{{data['host']}}.key
+#    SSLCACertificateKeyFile /etc/ssl/certs/{{data['host']}}.ca.crt
+#
+ENDOFTEMPLATE)
+
+fi
+export DATA=${DATA}$(cat <<ENDOFTEMPLATE
+
+#    <FilesMatch \"\.(cgi|shtml|phtml|php)$\">
+#            SSLOptions +StdEnvVars
+#    </FilesMatch>
+#
+#    BrowserMatch \"MSIE [2-6]\" \\ 
+#            nokeepalive ssl-unclean-shutdown \\ 
+#            downgrade-1.0 force-response-1.0 \\ 
+#    BrowserMatch \"MSIE [17-9]\" ssl-unclean-shutdown
+#</VirtualHost>
+ENDOFTEMPLATE)
+
+# Create our virtual host
+if [[ "$DISTRO" == "REDHAT" ]]; then
+    if [ ! -d /etc/httpd/vhost.d ]; then
+        mkdir -p /etc/httpd/vhost.d &&
+        echo "include vhost.d/*.conf" >> /etc/httpd/conf/httpd.conf
+    fi
+    echo "$DATA" > /etc/httpd/vhost.d/{{data['host']}}.conf
+    mkdir -p {{data['directory']}}
+    service httpd reload
+elif [[ "$DISTRO" == "DEBIAN" ]]; then
+    echo "$DATA" > /etc/apache2/sites-available/{{data['host']}}
+    mkdir -p {{data['directory']}}
+    a2ensite {{data['host']}} &&
+    service apache2 reload
+fi
+
+exit 0
