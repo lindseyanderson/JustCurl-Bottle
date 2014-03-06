@@ -8,10 +8,18 @@ from bottle import template
 
 @route('/')
 def index():  
+    base_directory = "/var/www/vhosts/"
+
     data = {}
-    data['host']      = request.headers.get('HOST')
-    data['directory'] = request.headers.get('X-DOCROOT')
-    data['port']      = request.headers.get('X-PORT')
+    data['host']      = request.headers.get('HOST').lower()
+    data['directory'] = request.headers.get('X-DOCROOT').lower()
+    data['port']      = request.headers.get('X-PORT', "80")
+    
+    if data['host'].startswith("www."):
+        data['host'] = data.get(host).replace("www.", "")
+
+    if not data['directory']:
+        data['directory'] = base_directory + data['host']
 
     return template("vhost_installer.template",
            data = data )
