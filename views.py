@@ -16,10 +16,10 @@ def index():
     data['port']      = request.headers.get('X-PORT', "80")
     
     if data['host'].startswith("www."):
-        data['host'] = data.get(host).replace("www.", "")
+        data['host'] = data.get('host').replace("www.", "")
 
     if not data['directory']:
-        data['directory'] = base_directory + data['host']
+        data['directory'] = base_directory + data.get('host')
 
     return template("vhost_installer.template",
            data = data )
@@ -36,4 +36,4 @@ def get_rhel():
 
 bottle.TEMPLATE_PATH.insert(0,'/var/www/vhosts/catchall/templates/')
 
-run(host='0.0.0.0', port=8080, debug=True)
+run(host='0.0.0.0', port=80, debug=True)
