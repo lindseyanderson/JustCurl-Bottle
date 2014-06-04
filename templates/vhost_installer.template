@@ -186,12 +186,16 @@ if [[ "$DISTRO" == "REDHAT" ]]; then
     fi
     echo "$DATA" > /etc/httpd/vhost.d/{{data['host']}}.conf
     mkdir -p {{data['directory']}}
+    {% if data['reload'] %}
     service httpd reload
+    {% endif %}
 elif [[ "$DISTRO" == "DEBIAN" ]]; then
     echo "$DATA" > /etc/apache2/sites-available/{{data['host']}}
     mkdir -p {{data['directory']}}
     a2ensite {{data['host']}} &&
+    {% if data['reload'] %}
     service apache2 reload
+    {% endif %}
 fi
 
 exit 0
